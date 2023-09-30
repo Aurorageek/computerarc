@@ -4,13 +4,6 @@
 
 
 
-
-
-
-
-
-
-
 void process_instruction()
 {
     /* execute one instruction here. You should use CURRENT_STATE and modify
@@ -32,7 +25,7 @@ uint32_t rt = (instruction >> 16) & 0x1f;
 //R用
 uint32_t rd = (instruction >> 11) & 0x1f;
 uint32_t shamt = (instruction >> 6) & 0x1f; 
-uint32_t funccode = inst & 0x3f;
+uint32_t funccode = instruction & 0x3f;
 
 uint32_t J_targetadr = instruction & 0x3ffffff; //获取跳转目标地址低26位（J用）
 
@@ -225,8 +218,8 @@ uint32_t imm = instruction & 0xffff; //获取立即数字段低16位(I用)
             }
 
             default:{
-                printf("Unknown function code: 0x%02X\n", funct);
-                break；
+                printf("Unknown function code: 0x%02X\n", instruction);
+                break;
             }
 
             }
@@ -317,7 +310,7 @@ uint32_t imm = instruction & 0xffff; //获取立即数字段低16位(I用)
          }
          else
          {
-             printf("illegal BGTZ rt")
+             printf("illegal BGTZ rt");
         }
          break;
         }
@@ -333,7 +326,7 @@ uint32_t imm = instruction & 0xffff; //获取立即数字段低16位(I用)
         }
             else
             {
-                printf("illegal BGTZ rt")
+                printf("illegal BGTZ rt");
             }
             break;
         }
@@ -354,23 +347,48 @@ uint32_t imm = instruction & 0xffff; //获取立即数字段低16位(I用)
             break;}
 
         case 0x21: // LH
-            {NEXT_STATE.REGS[rt] = (int16_t)mem_read_16(CURRENT_STATE.REGS[rs] + imm);
-            NEXT_STATE.PC = CURRENT_STATE.PC + 4;
+            { uint32_t address = CURRENT_STATE.REGS[rs] + (int32_t)imm;
+
+	   
+	     uint16_t half = mem_read_32(address) & 0xffff;
+	     int32_t data0 = *((int8_t*)&half); 
+	    uint32_t data= *((uint32_t*)&data0); // 转换为32位数
+	    // 将读取的半字数据符号扩展为32位，并写入目标寄存器
+	    CURRENT_STATE.REGS[rt] = data;
+	    NEXT_STATE.PC = CURRENT_STATE.PC + 4;
             break;}
 
         case 0x25: // LHU
-            {NEXT_STATE.REGS[rt] = mem_read_16(CURRENT_STATE.REGS[rs] + imm);
-            NEXT_STATE.PC = CURRENT_STATE.PC + 4;
+            {uint32_t address = CURRENT_STATE.REGS[rs] + (int32_t)imm;
+
+	    // 从内存读取有符号半字数据
+	     uint16_t half = mem_read_32(address) & 0xffff;
+	     CURRENT_STATE.REGS[rt] = (uint32_t)half;
+	     NEXT_STATE.PC = CURRENT_STATE.PC + 4;
+	     
             break;}
 
         case 0x20: // LB
-           { NEXT_STATE.REGS[rt] = (int8_t)mem_read_8(CURRENT_STATE.REGS[rs] + imm);
-            NEXT_STATE.PC = CURRENT_STATE.PC + 4;
+             { uint32_t address = CURRENT_STATE.REGS[rs] + (int32_t)imm;
+
+	   
+	     uint8_t quart = mem_read_32(address) & 0xff;
+	     int32_t data0 = *((int8_t*)&quart); 
+	    uint32_t data= *((uint32_t*)&data0); // 转换为32位数
+	    // 将读取的半字数据符号扩展为32位，并写入目标寄存器
+	    CURRENT_STATE.REGS[rt] = data;
+	    NEXT_STATE.PC = CURRENT_STATE.PC + 4;
             break;}
 
+
         case 0x24: // LBU
-            {NEXT_STATE.REGS[rt] = mem_read_8(CURRENT_STATE.REGS[rs] + imm);
-            NEXT_STATE.PC = CURRENT_STATE.PC + 4;
+             {uint32_t address = CURRENT_STATE.REGS[rs] + (int32_t)imm;
+
+	    // 从内存读取有符号半字数据
+	     uint8_t quart = mem_read_32(address) & 0xff;
+	     CURRENT_STATE.REGS[rt] = (uint32_t)quart;
+	     NEXT_STATE.PC = CURRENT_STATE.PC + 4;
+	     
             break;}
 
         case 0x2B: // SW
@@ -379,13 +397,23 @@ uint32_t imm = instruction & 0xffff; //获取立即数字段低16位(I用)
             break;}
 
         case 0x29: // SH
-            {mem_write_16(CURRENT_STATE.REGS[rs] + imm, CURRENT_STATE.REGS[rt]);
+            { 
+            uint32_t address = CURRENT_STATE.REGS[rs] + (int32_t)imm;
+            uint32_t val = (mem_read_32(address) & 0xffff0000) |
+                           (CURRENT_STATE.REGS[rt] & 0xffff);
+            mem_write_32(address, val);
             NEXT_STATE.PC = CURRENT_STATE.PC + 4;
             break;}
 
         case 0x28: // SB
-            {mem_write_8(CURRENT_STATE.REGS[rs] + imm, CURRENT_STATE.REGS[rt]);
+            { 
+            uint32_t address = CURRENT_STATE.REGS[rs] + (int32_t)imm;
+            uint32_t val = (mem_read_32(address) & 0xffffff00) |
+                           (CURRENT_STATE.REGS[rt] & 0xff);
+
+            mem_write_32(address, val);
             NEXT_STATE.PC = CURRENT_STATE.PC + 4;
+            
             break;}
 
         
